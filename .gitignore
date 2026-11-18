@@ -32,3 +32,5 @@ coverage/
 postgres-data/
 rabbitmq-data/
 mediacheck-data/
+
+docs/
