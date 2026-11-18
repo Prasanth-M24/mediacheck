@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0",
+  "scanId": "3f858874-31f8-4c49-b384-3ec92ca66350",
+  "companyId": "c6fb481d-13a7-446a-a29e-0b94c78f1ec6",
+  "generatedAt": "2026-10-26T08:00:00Z",
+  "pipelines": [
+    { "name": "PROVENANCE", "status": "COMPLETED", "version": "unconfigured" },
+    { "name": "RIGHTS", "status": "COMPLETED", "version": "1.0" },
+    { "name": "DEPLOYMENT_READINESS", "status": "COMPLETED", "version": "1.0" }
+  ],
+  "findings": [
+    {
+      "id": "rights-no-record",
+      "pipeline": "RIGHTS",
+      "status": "UNKNOWN",
+      "summary": "No matching permission record was found in the company registry.",
+      "evidenceReferences": []
+    }
+  ]
+}

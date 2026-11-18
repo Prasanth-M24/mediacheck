@@ -1,0 +1,7 @@
+logging:
+  level:
+    root: INFO
+    org.springframework.web: INFO
+mediacheck:
+  security:
+    dev-token-delivery: ${MEDIACHECK_DEV_TOKEN_DELIVERY:true}

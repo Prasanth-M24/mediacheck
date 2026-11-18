@@ -1,0 +1,2 @@
+import { EmptyState, PageHeader, SectionCard } from '../components/ui'
+export function PlaceholderPage({ title }: { title: string }) { return <><PageHeader eyebrow="PHASE 1" title={title}>This area is prepared for the MEDIACHECK workflow but is not available in the current foundation.</PageHeader><SectionCard title="Not available yet"><EmptyState title="Feature planned for a later phase">No records, decisions, or actions are shown until the corresponding backend workflow exists.</EmptyState></SectionCard></> }

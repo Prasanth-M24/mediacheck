@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mediacheck.example/contracts/policy-decision/1.0",
+  "title": "MEDIACHECK policy decision",
+  "type": "object",
+  "required": ["schemaVersion", "scanId", "companyId", "policyVersionId", "decision", "firedRuleIds", "findingReferences", "decidedAt"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "scanId": { "type": "string", "format": "uuid" },
+    "companyId": { "type": "string", "format": "uuid" },
+    "policyVersionId": { "type": "string", "format": "uuid" },
+    "decision": { "enum": ["APPROVE", "REVIEW", "BLOCK"] },
+    "firedRuleIds": { "type": "array", "items": { "type": "string" } },
+    "findingReferences": { "type": "array", "items": { "type": "string" } },
+    "reasons": { "type": "array", "items": { "type": "string" } },
+    "decidedAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

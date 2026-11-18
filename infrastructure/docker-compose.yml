@@ -1,0 +1,98 @@
+services:
+  frontend:
+    build:
+      context: ../frontend
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
+    ports:
+      - "127.0.0.1:${FRONTEND_HOST_PORT:-5173}:8080"
+    depends_on:
+      backend:
+        condition: service_started
+    networks: [mediacheck]
+  backend:
+    build: ../backend
+    environment:
+      APP_VERSION: ${APP_VERSION:-0.1.0}
+      SERVER_PORT: 8080
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
+      APP_ENV: ${APP_ENV:-local}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-mediacheck}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-mediacheck_app}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-replace_me}
+      MEDIACHECK_JWT_SECRET: ${MEDIACHECK_JWT_SECRET:-}
+      MEDIACHECK_JWT_ISSUER: ${MEDIACHECK_JWT_ISSUER:-http://localhost:8080}
+      MEDIACHECK_ACCESS_TOKEN_SECONDS: ${MEDIACHECK_ACCESS_TOKEN_SECONDS:-600}
+      MEDIACHECK_REFRESH_TOKEN_DAYS: ${MEDIACHECK_REFRESH_TOKEN_DAYS:-14}
+      MEDIACHECK_REFRESH_COOKIE_SECURE: ${MEDIACHECK_REFRESH_COOKIE_SECURE:-false}
+      MEDIACHECK_DEV_TOKEN_DELIVERY: ${MEDIACHECK_DEV_TOKEN_DELIVERY:-true}
+      MEDIACHECK_CORS_ORIGINS: ${MEDIACHECK_CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      MEDIACHECK_EMAIL_ENABLED: ${MEDIACHECK_EMAIL_ENABLED:-false}
+      MEDIACHECK_EMAIL_FROM: ${MEDIACHECK_EMAIL_FROM:-}
+      MEDIACHECK_PUBLIC_APP_URL: ${MEDIACHECK_PUBLIC_APP_URL:-http://localhost:5173}
+      MEDIACHECK_SMTP_HOST: ${MEDIACHECK_SMTP_HOST:-}
+      MEDIACHECK_SMTP_PORT: ${MEDIACHECK_SMTP_PORT:-587}
+      MEDIACHECK_SMTP_USERNAME: ${MEDIACHECK_SMTP_USERNAME:-}
+      MEDIACHECK_SMTP_PASSWORD: ${MEDIACHECK_SMTP_PASSWORD:-}
+      MEDIACHECK_SMTP_AUTH: ${MEDIACHECK_SMTP_AUTH:-true}
+      MEDIACHECK_SMTP_STARTTLS: ${MEDIACHECK_SMTP_STARTTLS:-true}
+      AI_SERVICE_BASE_URL: http://ai-service:8000
+      MEDIACHECK_STORAGE_PROVIDER: ${MEDIACHECK_STORAGE_PROVIDER:-local}
+      MEDIACHECK_STORAGE_PATH: ${MEDIACHECK_STORAGE_PATH:-./mediacheck-data}
+      B2_CONFIGURED: ${B2_CONFIGURED:-false}
+    ports:
+      - "127.0.0.1:${BACKEND_HOST_PORT:-8081}:8080"
+    volumes:
+      - mediacheck-data:/app/mediacheck-data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks: [mediacheck]
+  ai-service:
+    build: ../ai-service
+    networks: [mediacheck]
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mediacheck}
+      POSTGRES_USER: ${POSTGRES_USER:-mediacheck_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-replace_me}
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [mediacheck]
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-replace_me}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-replace_me}
+    ports:
+      - "127.0.0.1:${RABBITMQ_AMQP_HOST_PORT:-5672}:5672"
+      - "127.0.0.1:${RABBITMQ_MANAGEMENT_HOST_PORT:-15673}:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [mediacheck]
+  mailpit:
+    image: axllent/mailpit:v1.21
+    profiles: [email]
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+    networks: [mediacheck]
+networks:
+  mediacheck:
+    driver: bridge
+volumes:
+  postgres-data:
+  mediacheck-data:

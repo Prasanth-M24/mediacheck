@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mediacheck.example/contracts/reasoning-report/1.0",
+  "title": "MEDIACHECK reasoning report",
+  "type": "object",
+  "required": ["schemaVersion", "scanId", "companyId", "officialDecision", "summary", "uncertainties", "generatedAt"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "scanId": { "type": "string", "format": "uuid" },
+    "companyId": { "type": "string", "format": "uuid" },
+    "officialDecision": { "enum": ["APPROVE", "REVIEW", "BLOCK"] },
+    "summary": { "type": "string" },
+    "provenanceFindings": { "type": "array", "items": { "type": "string" } },
+    "rightsFindings": { "type": "array", "items": { "type": "string" } },
+    "deploymentReadinessFindings": { "type": "array", "items": { "type": "string" } },
+    "uncertainties": { "type": "array", "items": { "type": "string" } },
+    "recommendedNextSteps": { "type": "array", "items": { "type": "string" } },
+    "generatedAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

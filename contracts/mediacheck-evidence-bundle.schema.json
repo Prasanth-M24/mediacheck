@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mediacheck.example/contracts/evidence-bundle/1.0",
+  "title": "MEDIACHECK evidence bundle",
+  "type": "object",
+  "required": ["schemaVersion", "scanId", "companyId", "generatedAt", "pipelines", "findings"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "scanId": { "type": "string", "format": "uuid" },
+    "companyId": { "type": "string", "format": "uuid" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "pipelines": { "type": "array", "items": { "$ref": "#/$defs/pipeline" } },
+    "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } }
+  },
+  "$defs": {
+    "pipeline": {
+      "type": "object",
+      "required": ["name", "status"],
+      "properties": {
+        "name": { "enum": ["PROVENANCE", "RIGHTS", "DEPLOYMENT_READINESS"] },
+        "status": { "enum": ["COMPLETED", "FAILED", "UNAVAILABLE", "TIMED_OUT"] },
+        "version": { "type": "string" },
+        "details": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "finding": {
+      "type": "object",
+      "required": ["id", "pipeline", "status", "summary"],
+      "properties": {
+        "id": { "type": "string" },
+        "pipeline": { "enum": ["PROVENANCE", "RIGHTS", "DEPLOYMENT_READINESS"] },
+        "status": { "enum": ["PASS", "FAIL", "ADVISORY_FLAG", "NOT_APPLICABLE", "UNAVAILABLE", "UNKNOWN"] },
+        "summary": { "type": "string", "minLength": 1 },
+        "evidenceReferences": { "type": "array", "items": { "type": "string" } },
+        "details": { "type": "object" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
