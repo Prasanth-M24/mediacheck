@@ -25,6 +25,11 @@ spring:
       mail.smtp.auth: ${MEDIACHECK_SMTP_AUTH:true}
       mail.smtp.starttls.enable: ${MEDIACHECK_SMTP_STARTTLS:true}
       mail.smtp.starttls.required: ${MEDIACHECK_SMTP_STARTTLS:true}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_DEFAULT_USER:mediacheck}
+    password: ${RABBITMQ_DEFAULT_PASS:replace_me}
 management:
   endpoints:
     web:
@@ -67,3 +72,9 @@ mediacheck:
     enabled: ${MEDIACHECK_EMAIL_ENABLED:false}
     from: ${MEDIACHECK_EMAIL_FROM:}
     public-app-url: ${MEDIACHECK_PUBLIC_APP_URL:http://localhost:5173}
+  messaging:
+    enabled: ${MEDIACHECK_MESSAGING_ENABLED:false}
+    queue: ${MEDIACHECK_SCAN_QUEUE:mediacheck.media.scan}
+  media:
+    max-file-size: ${MEDIACHECK_MEDIA_MAX_FILE_SIZE:52428800}
+    recovery-delay-ms: ${MEDIACHECK_MEDIA_RECOVERY_DELAY_MS:30000}

@@ -4,8 +4,12 @@ import com.mediacheck.domain.*;
 import com.mediacheck.repository.*;
 import com.mediacheck.storage.StorageService;
 import com.mediacheck.storage.StoredFile;
+import com.mediacheck.media.ImageFingerprint;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import java.io.InputStream;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -26,12 +30,13 @@ public class RightsRegistryService {
   private final LicenceDocumentRepository documents;
   private final AuditEventRepository audit;
   private final StorageService storage;
+  private final JdbcTemplate jdbc;
 
   public RightsRegistryService(CompanyRepository companies, RightsAssetRepository assets,
       LicenceRecordRepository licences, LicenceDocumentRepository documents,
-      AuditEventRepository audit, StorageService storage) {
+      AuditEventRepository audit, StorageService storage, JdbcTemplate jdbc) {
     this.companies = companies; this.assets = assets; this.licences = licences;
-    this.documents = documents; this.audit = audit; this.storage = storage;
+    this.documents = documents; this.audit = audit; this.storage = storage; this.jdbc = jdbc;
   }
 
   @Transactional
@@ -67,9 +72,10 @@ public class RightsRegistryService {
 
   @Transactional
   public AssetResponse uploadAsset(UUID companyId, UUID userId, UUID membershipId, UUID id, MultipartFile file) {
-    RightsAsset a = asset(companyId, id); StoredFile stored = store("rights-assets", companyId, id, file);
+    RightsAsset a = asset(companyId, id); byte[] bytes; try { bytes = file.getBytes(); } catch (IOException e) { throw bad("file_read_failed"); } StoredFile stored = store("rights-assets", companyId, id, file, bytes);
     a.setOriginalFilename(safeFilename(file.getOriginalFilename())); a.setMimeType(stored.mimeType()); a.setFileSize(stored.fileSize());
     a.setSha256Checksum(stored.sha256Checksum()); a.setStorageKey(stored.storageKey());
+    jdbc.update("UPDATE rights_assets SET perceptual_hash=? WHERE company_id=? AND id=?", ImageFingerprint.differenceHash(bytes), companyId, id);
     audit(a.getCompany(), userId, membershipId, "RIGHTS_ASSET_FILE_UPLOADED", id); return asset(a);
   }
 
@@ -136,12 +142,13 @@ public class RightsRegistryService {
         licences.findTop5ByCompany_IdOrderByCreatedAtDesc(companyId).stream().map(l -> new LicenceSummary(l.getId(), l.getName(), l.getLicenceReference(), effective(l).name(), l.getValidUntil(), l.getCreatedAt())).toList());
   }
 
-  private StoredFile store(String category, UUID companyId, UUID id, MultipartFile file) {
+  private StoredFile store(String category, UUID companyId, UUID id, MultipartFile file) { try { return store(category, companyId, id, file, file.getBytes()); } catch (IOException e) { throw bad("file_read_failed"); } }
+  private StoredFile store(String category, UUID companyId, UUID id, MultipartFile file, byte[] bytes) {
     if (file == null || file.isEmpty()) throw bad("empty_file");
     String contentType = file.getContentType();
     if (contentType == null || !(contentType.startsWith("image/") || contentType.startsWith("audio/") || contentType.startsWith("video/") || contentType.equals("application/pdf") || contentType.equals("text/plain") || contentType.equals("application/msword") || contentType.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))) throw bad("unsupported_file_type");
     String name = safeFilename(file.getOriginalFilename()); String ext = name.contains(".") ? name.substring(name.lastIndexOf('.') + 1) : "bin";
-    try { return storage.store(category, companyId, id, ext, file.getInputStream(), file.getSize()); } catch (Exception e) { throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "file_storage_failed"); }
+    try { return storage.store(category, companyId, id, ext, new ByteArrayInputStream(bytes), bytes.length); } catch (Exception e) { throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "file_storage_failed"); }
   }
   private RightsAsset asset(UUID c, UUID id) { return assets.findByCompany_IdAndId(c, id).orElseThrow(() -> notFound("asset_not_found")); }
   private LicenceRecord licenceEntity(UUID c, UUID id) { return licences.findByCompany_IdAndId(c, id).orElseThrow(() -> notFound("licence_not_found")); }

@@ -1,13 +1,13 @@
 # MEDIACHECK
 
-MEDIACHECK is an image-first, multi-tenant platform for AI content and rights review. Phase 1 provides a frontend shell, Spring Boot and FastAPI foundations, and local Docker infrastructure. It does not yet analyze media, authenticate users, or make rights decisions.
+MEDIACHECK is an image-first, multi-tenant platform for AI content and rights review. Phase 3 adds authenticated image ingestion, private storage, asynchronous review jobs, evidence aggregation, deterministic decisions, reports, and audit history.
 
 ## Repository layout
 
 ```text
-frontend/        React, TypeScript, Vite, Tailwind application shell
-backend/         Spring Boot API foundation and future policy engine
-ai-service/      FastAPI private analysis-service foundation
+frontend/        React, TypeScript, Vite, Tailwind application
+backend/         Spring Boot authentication, registry, media-review and report APIs
+ai-service/      FastAPI private analysis-service boundary
 infrastructure/  Docker Compose for local services
 contracts/       Versioned JSON Schemas shared by services
 docs/            Architecture and setup documentation
@@ -23,4 +23,4 @@ The Phase 2.1 database schema, tenancy model, and verification status are docume
 
 ## Current limitations
 
-There is no authentication, tenant enforcement, upload workflow, Backblaze B2 client, queue producer/consumer, analysis pipeline, rights CRUD, policy engine, or production-security certification. Storage defaults to a local filesystem seam; B2 is optional, private-by-design, and unverified without supplied credentials. RabbitMQ is self-hosted open-source software in local Compose; it has no Phase 1 job processing integration.
+Phase 3 is documented as partially complete in [the Phase 3 report](docs/phase-3-completion.md). External AI reasoning, validated AI-generation detection, perceptual rights matching, and PostgreSQL/RabbitMQ/browser acceptance require the remaining runtime/provider setup. Storage defaults to a private local filesystem seam; B2 remains optional and unverified without supplied credentials.

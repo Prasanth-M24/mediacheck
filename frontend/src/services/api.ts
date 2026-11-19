@@ -110,3 +110,147 @@ export function listLicenceDocuments(id: string) { return apiRequest<RegistryDoc
 export function uploadLicenceDocument(id: string, file: File) { const body = new FormData(); body.append('file', file); return apiRequest<RegistryDocument>(`/api/v1/licences/${id}/documents`, { method: 'POST', body }) }
 export function downloadLicenceDocument(licenceId: string, documentId: string) { return apiBlob(`/api/v1/licences/${licenceId}/documents/${documentId}/file`) }
 export function deleteLicenceDocument(licenceId: string, documentId: string) { return apiRequest<void>(`/api/v1/licences/${licenceId}/documents/${documentId}`, { method: 'DELETE' }) }
+
+export type MediaSummary = {
+  id: string
+  originalFilename: string
+  mimeType: string
+  fileSizeBytes: number
+  sha256Checksum: string
+  lifecycleStatus: string
+  scanStatus: string
+  decision: string | null
+  uploadedAt: string
+}
+
+export type MediaDetail = {
+  id: string
+  companyId: string
+  originalFilename: string
+  mimeType: string
+  fileSizeBytes: number
+  sha256Checksum: string
+  widthPixels: number | null
+  heightPixels: number | null
+  lifecycleStatus: string
+  scanStatus: string
+  decision: string | null
+  intendedChannel: string | null
+  intendedTerritory: string | null
+  intendedUse: string | null
+  plannedPublicationAt: string | null
+  uploadedAt: string
+  updatedAt: string
+}
+
+export type Finding = {
+  id: string
+  category: string
+  checkName: string
+  status: string
+  summary: string
+  details: string
+}
+
+export type ReviewReport = {
+  reportId: string
+  mediaId: string
+  originalFilename: string
+  mimeType: string
+  fileSizeBytes: number
+  sha256Checksum: string
+  widthPixels: number | null
+  heightPixels: number | null
+  intendedChannel: string | null
+  intendedTerritory: string | null
+  intendedUse: string | null
+  plannedPublicationAt: string | null
+  processingStatus: string
+  decision: string
+  policyVersion: string
+  explanationStatus: string
+  explanation: string
+  reasons: string[]
+  evidence: Finding[]
+  generatedAt: string
+}
+
+export type ReportSummary = {
+  reportId: string
+  mediaId: string
+  filename: string
+  decision: string
+  reportStatus: string
+  createdAt: string
+}
+
+export type CompanyPolicy = {
+  id: string
+  name: string
+  status: string
+  created_at: string
+  updated_at: string
+}
+
+export function listMedia(page = 0, size = 20) {
+  return apiRequest<Paged<MediaSummary>>(`/api/v1/media?page=${page}&size=${size}`)
+}
+
+export async function uploadMedia(
+  file: File,
+  params?: {
+    intendedChannel?: string
+    intendedTerritory?: string
+    intendedUse?: string
+    plannedPublicationAt?: string
+  }
+) {
+  const body = new FormData()
+  body.append('file', file)
+  const query = new URLSearchParams()
+  if (params?.intendedChannel) query.set('intendedChannel', params.intendedChannel)
+  if (params?.intendedTerritory) query.set('intendedTerritory', params.intendedTerritory)
+  if (params?.intendedUse) query.set('intendedUse', params.intendedUse)
+  if (params?.plannedPublicationAt) query.set('plannedPublicationAt', params.plannedPublicationAt)
+  const qs = query.toString() ? `?${query.toString()}` : ''
+  return apiRequest<MediaDetail>(`/api/v1/media${qs}`, { method: 'POST', body })
+}
+
+export function getMediaReport(mediaId: string) {
+  return apiRequest<ReviewReport>(`/api/v1/media/${mediaId}/report`)
+}
+
+export function archiveMedia(mediaId: string) {
+  return apiRequest<void>(`/api/v1/media/${mediaId}`, { method: 'DELETE' })
+}
+
+export async function downloadMediaFile(id: string): Promise<Blob> {
+  const { blob } = await apiBlob(`/api/v1/media/${id}/file`)
+  return blob
+}
+
+export function listReports() {
+  return apiRequest<ReportSummary[]>('/api/v1/reports')
+}
+
+export function listPolicies() {
+  return apiRequest<CompanyPolicy[]>('/api/v1/policies')
+}
+
+export function createPolicy(name: string, rulesJson: string) {
+  return apiRequest<{ id: string; versionId: string; name: string; status: string }>('/api/v1/policies', {
+    method: 'POST',
+    body: JSON.stringify({ name, rulesJson }),
+  })
+}
+
+export function createPolicyVersion(policyId: string, rulesJson: string) {
+  return apiRequest<{ id: string; policyId: string; versionNumber: number; status: string }>(
+    `/api/v1/policies/${policyId}/versions`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ rulesJson }),
+    }
+  )
+}
+
