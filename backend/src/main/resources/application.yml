@@ -44,6 +44,7 @@ management:
 logging:
   level:
     root: INFO
+    org.springframework.security: TRACE
     org.springframework.web: INFO
     org.hibernate.SQL: INFO
     org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor: INFO

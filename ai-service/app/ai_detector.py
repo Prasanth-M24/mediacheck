@@ -42,11 +42,11 @@ def extract_features(image_bytes: bytes) -> np.ndarray:
     hf_power = np.sum(power_spectrum[hf_mask])
     hf_power_ratio = float(hf_power / total_power)
 
-    # Spectral peak ratio: max peak outside DC radius 15 vs median floor
+    # Spectral peak ratio: max peak outside DC radius 15 vs median floor (log difference)
     non_dc_mask = r >= 15
     max_peak = float(np.max(log_power[non_dc_mask])) if np.any(non_dc_mask) else 0.0
-    median_floor = float(np.median(log_power[hf_mask])) if np.any(hf_mask) else 1.0
-    spectral_peak_ratio = float(max_peak / max(median_floor, 1e-4))
+    median_floor = float(np.median(log_power[hf_mask])) if np.any(hf_mask) else 0.0
+    spectral_peak_ratio = float(max_peak - median_floor)
 
     # Azimuthal sector variance (check for directional grid bias)
     theta = np.arctan2(y - center_y, x - center_x)
@@ -91,7 +91,7 @@ class AiGenerationDetector:
         self.model_version = "spectral_spatial_ensemble_v1"
         self._fit_baseline_model()
 
-    def _generate_synthetic_fixture(self, rng: np.random.Generator, synthetic: bool) -> bytes:
+    def _generate_synthetic_fixture(self, rng: np.random.Generator, synthetic: bool, format_name: str | None = None) -> bytes:
         """Create a synthetic or authentic test image with realistic texture/frequency profiles."""
         base = np.zeros((256, 256, 3), dtype=np.uint8)
         if synthetic:
@@ -115,7 +115,12 @@ class AiGenerationDetector:
             base[:, :, 2] = np.clip(natural_smooth * 0.9 + rng.normal(0, 5, (256, 256)), 0, 255).astype(np.uint8)
 
         buf = io.BytesIO()
-        Image.fromarray(base).save(buf, format="JPEG", quality=90)
+        chosen_format = format_name if format_name else ("PNG" if rng.random() > 0.6 else "JPEG")
+        if chosen_format == "JPEG":
+            q = int(rng.integers(70, 96))
+            Image.fromarray(base).save(buf, format="JPEG", quality=q)
+        else:
+            Image.fromarray(base).save(buf, format="PNG")
         return buf.getvalue()
 
     def _fit_baseline_model(self) -> None:

@@ -104,7 +104,7 @@ public class SecurityConfiguration {
     http.sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
     http.authorizeHttpRequests(auth -> auth
         .requestMatchers(HttpMethod.OPTIONS,"/**").permitAll()
-        .requestMatchers("/actuator/health","/api/v1/system/info","/api/v1/auth/register-company","/api/v1/auth/login",
+        .requestMatchers("/error","/actuator/health","/api/v1/system/info","/api/v1/auth/register-company","/api/v1/auth/login",
             "/api/v1/auth/refresh","/api/v1/auth/accept-invitation","/api/v1/auth/forgot-password",
             "/api/v1/auth/reset-password","/api/v1/auth/verify-email","/api/v1/auth/resend-verification","/api/v1/auth/csrf").permitAll()
         .anyRequest().authenticated());

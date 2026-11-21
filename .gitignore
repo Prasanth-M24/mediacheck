@@ -34,3 +34,13 @@ rabbitmq-data/
 mediacheck-data/
 
 docs/
+
+c.txt
+cookies.txt
+diagnose.cjs
+
+
+test-fixtures/
+test-phase3-browser.cjs
+
+tests/

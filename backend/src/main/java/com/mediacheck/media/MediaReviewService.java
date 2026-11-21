@@ -30,6 +30,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -118,7 +119,8 @@ public class MediaReviewService {
           "VALUES (?, ?, ?, ?, ?, ?, 'local', ?, ?, ?, ?, ?, 'UPLOADED', ?, ?, ?, ?, ?)",
           mediaId, company, user, membership, safeFilename(file.getOriginalFilename()), stored.storageKey(),
           mime, bytes.length, checksum, d.width(), d.height(), perceptualHash,
-          blank(intendedChannel), blank(intendedTerritory), blank(intendedUse), plannedPublicationAt
+          blank(intendedChannel), blank(intendedTerritory), blank(intendedUse),
+          plannedPublicationAt == null ? null : Timestamp.from(plannedPublicationAt)
       );
 
       jdbc.update("INSERT INTO scan_jobs (id, company_id, media_asset_id, status, retry_count) VALUES (?, ?, ?, 'QUEUED', 0)",
@@ -455,7 +457,8 @@ public class MediaReviewService {
           // Finding 2: C2PA
           EvidenceStatus c2paEvStatus = "DETECTED".equals(c2paStatus) ? EvidenceStatus.PASS
               : "INVALID".equals(c2paStatus) ? EvidenceStatus.ADVISORY_FLAG
-              : EvidenceStatus.PASS; // Not detected is standard, not a failure
+              : "NOT_DETECTED".equals(c2paStatus) ? EvidenceStatus.PASS
+              : EvidenceStatus.UNAVAILABLE;
           recordFinding(company, runId, "c2pa_verification", c2paEvStatus,
               "DETECTED".equals(c2paStatus) ? "Valid C2PA content credentials verified."
                   : "INVALID".equals(c2paStatus) ? "Corrupted or invalid C2PA manifest detected."
@@ -465,7 +468,8 @@ public class MediaReviewService {
           // Finding 3: Manipulation (ELA)
           JsonNode manip = json.path("manipulation_details");
           String manipIndicator = manip.path("indicator").asText("LOW_DISCREPANCY");
-          EvidenceStatus manipEvStatus = "HIGH_DISCREPANCY".equals(manipIndicator) ? EvidenceStatus.ADVISORY_FLAG : EvidenceStatus.PASS;
+          EvidenceStatus manipEvStatus = "HIGH_DISCREPANCY".equals(manipIndicator) ? EvidenceStatus.ADVISORY_FLAG
+              : "UNAVAILABLE".equals(manipIndicator) ? EvidenceStatus.UNAVAILABLE : EvidenceStatus.PASS;
           recordFinding(company, runId, "manipulation_indicators", manipEvStatus,
               manip.path("summary").asText("Compression levels verified."),
               json(manip));
@@ -474,7 +478,7 @@ public class MediaReviewService {
           EvidenceStatus aiEvStatus = "DETECTED".equals(aiGenStatus) ? EvidenceStatus.ADVISORY_FLAG
               : "LIKELY_AI_GENERATED".equals(aiGenStatus) ? EvidenceStatus.ADVISORY_FLAG
               : "INCONCLUSIVE".equals(aiGenStatus) ? EvidenceStatus.ADVISORY_FLAG
-              : EvidenceStatus.PASS;
+              : "UNAVAILABLE".equals(aiGenStatus) ? EvidenceStatus.UNAVAILABLE : EvidenceStatus.PASS;
           recordFinding(company, runId, "ai_generation_detection", aiEvStatus,
               json.path("ai_generation_details").path("assessment").asText("Spectral analysis complete."),
               json(json.path("ai_generation_details")));

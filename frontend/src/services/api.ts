@@ -25,16 +25,25 @@ export type RegisterResponse = { userId: string | null; companyId: string | null
 export type SystemInfo = { service: string; version: string; apiVersion: string }
 
 let csrfToken: string | null = null
+let csrfPromise: Promise<string> | null = null
 let accessToken: string | null = null
 export function setAccessToken(value: string | null) { accessToken = value }
 
 async function csrf(): Promise<string> {
   if (csrfToken) return csrfToken
-  const response = await fetch(`${apiBaseUrl}/api/v1/auth/csrf`, { credentials: 'include' })
-  if (!response.ok) throw new Error('Unable to initialize a secure session')
-  const body = await response.json() as { token: string }
-  csrfToken = body.token
-  return body.token
+  if (!csrfPromise) {
+    csrfPromise = fetch(`${apiBaseUrl}/api/v1/auth/csrf`, { credentials: 'include' })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Unable to initialize a secure session')
+        const body = (await response.json()) as { token: string }
+        csrfToken = body.token
+        return body.token
+      })
+      .finally(() => {
+        csrfPromise = null
+      })
+  }
+  return csrfPromise
 }
 
 export async function apiRequest<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {

@@ -52,7 +52,6 @@ def inspect_c2pa(image_bytes: bytes, mime_type: str) -> dict[str, Any]:
     try:
         with c2pa.Reader(mime_type, stream) as reader:
             manifest_raw = reader.json()
-            is_valid = reader.is_valid() if hasattr(reader, "is_valid") else True
 
             manifest_data: dict[str, Any] = {}
             if manifest_raw:
@@ -61,17 +60,34 @@ def inspect_c2pa(image_bytes: bytes, mime_type: str) -> dict[str, Any]:
                 except Exception:
                     manifest_data = {"raw": str(manifest_raw)}
 
-            active_manifest = manifest_data.get("active_manifest") or {}
+            # c2pa-rs formats active_manifest as either a label string pointing to manifests[label] or an object
+            active_manifest_id = manifest_data.get("active_manifest")
+            manifests_map = manifest_data.get("manifests") or {}
+            active_manifest: dict[str, Any] = {}
+            if isinstance(active_manifest_id, str) and isinstance(manifests_map, dict):
+                active_manifest = manifests_map.get(active_manifest_id) or {}
+            elif isinstance(active_manifest_id, dict):
+                active_manifest = active_manifest_id
+
             claim_generator = active_manifest.get("claim_generator")
+            claim_generator_info = active_manifest.get("claim_generator_info") or []
+            if not claim_generator and claim_generator_info and isinstance(claim_generator_info, list):
+                first_cg = claim_generator_info[0]
+                if isinstance(first_cg, dict):
+                    claim_generator = first_cg.get("name")
+
             title = active_manifest.get("title")
             signature_info = active_manifest.get("signature_info") or {}
 
             signer_info = {
-                "issuer": signature_info.get("issuer"),
+                "issuer": signature_info.get("issuer") or signature_info.get("common_name"),
                 "time": signature_info.get("time"),
                 "cert_serial_number": signature_info.get("cert_serial_number"),
                 "claim_generator": claim_generator,
             }
+
+            validation_state = manifest_data.get("validation_state")
+            is_valid = (validation_state == "Valid") or (validation_state is None and bool(signature_info))
 
             validation_results = None
             if hasattr(reader, "get_validation_results"):
@@ -106,15 +122,15 @@ def inspect_c2pa(image_bytes: bytes, mime_type: str) -> dict[str, Any]:
                 "details": "No C2PA manifest found in image. This is typical for ordinary camera and web images.",
                 "limitations": ["Missing C2PA credentials do NOT indicate AI generation or malicious tampering."],
             }
-        elif "Could not parse" in err_msg or "corrupt" in err_msg.lower() or "invalid" in err_msg.lower():
+        elif "Verify" in err_msg or "Could not parse" in err_msg or "corrupt" in err_msg.lower() or "invalid" in err_msg.lower() or "unexpected end" in err_msg.lower():
             return {
                 "status": "INVALID",
                 "has_credentials": True,
                 "is_valid": False,
                 "manifest": None,
                 "signer_info": None,
-                "details": f"C2PA manifest parsing error: {err_msg}",
-                "limitations": ["Corrupted or incomplete manifest structure detected."],
+                "details": f"C2PA manifest verification/parsing error: {err_msg}",
+                "limitations": ["Corrupted or tampered manifest structure detected."],
             }
         else:
             return {
